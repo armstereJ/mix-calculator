@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Product Mix Profit Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      margin-bottom: 0;
+    }
+    small {
+      color: #555;
+    }
+    .inputs {
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      max-width: 700px;
+    }
+    label {
+      display: inline-block;
+      width: 200px;
+      margin-bottom: 4px;
+    }
+    input[type="number"] {
+      width: 120px;
+      padding: 3px 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 15px;
+      min-width: 900px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 4px 6px;
+      text-align: right;
+      font-size: 13px;
+    }
+    th {
+      background-color: #005f73;
+      color: white;
+    }
+    tr:nth-child(even) td {
+      background-color: #f5f5f5;
+    }
+    td.scenario {
+      text-align: left;
+      font-weight: bold;
+    }
+    .warning {
+      color: #c1121f;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Product Mix Profit Calculator</h1>
+  <small>All values in RM mil. Edit the mix % and margins to see impact instantly.</small>
+
+  <div class="inputs">
+    <div>
+      <label for="totalEad">Total EAD (RM mil):</label>
+      <input type="number" id="totalEad" value="10000" step="100" />
+    </div>
+    <br />
+    <div><strong>Profit margin per RM1 of EAD (decimal)</strong></div>
+    <div>
+      <label for="marginC">Margin C:</label>
+      <input type="number" id="marginC" value="0.02" step="0.001" />
+    </div>
+    <div>
+      <label for="marginD">Margin D:</label>
+      <input type="number" id="marginD" value="0.005" step="0.001" />
+    </div>
+    <div>
+      <label for="marginHD">Margin HD:</label>
+      <input type="number" id="marginHD" value="-0.05" step="0.001" />
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Scenario</th>
+        <th colspan="3">% Mix</th>
+        <th colspan="3">EAD (RM mil)</th>
+        <th colspan="4">Profit after direct OPEX (RM mil)</th>
+      </tr>
+      <tr>
+        <th>% C</th>
+        <th>% D</th>
+        <th>% HD</th>
+        <th>C</th>
+        <th>D</th>
+        <th>HD</th>
+        <th>C</th>
+        <th>D</th>
+        <th>HD</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="scenarioBody">
+      <!-- rows will be added by JS -->
+    </tbody>
+  </table>
+
+  <div id="warning" class="warning"></div>
+
+  <script>
+    const scenarios = [
+      { name: "40/40/20", c: 40, d: 40, hd: 20 },
+      { name: "40/45/15", c: 40, d: 45, hd: 15 },
+      { name: "35/55/10", c: 35, d: 55, hd: 10 },
+      { name: "30/60/10", c: 30, d: 60, hd: 10 },
+      { name: "20/70/10", c: 20, d: 70, hd: 10 },
+      { name: "20/75/5",  c: 20, d: 75, hd: 5  },
+      { name: "75/15/10", c: 75, d: 15, hd: 10 },
+      { name: "80/10/10", c: 80, d: 10, hd: 10 }
+    ];
+
+    const tbody = document.getElementById("scenarioBody");
+    const warning = document.getElementById("warning");
+
+    function createRow(s) {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td class="scenario">${s.name}</td>
+        <td><input type="number" class="pctC" value="${s.c}" step="1"></td>
+        <td><input type="number" class="pctD" value="${s.d}" step="1"></td>
+        <td><input type="number" class="pctHD" value="${s.hd}" step="1"></td>
+        <td class="eadC"></td>
+        <td class="eadD"></td>
+        <td class="eadHD"></td>
+        <td class="profitC"></td>
+        <td class="profitD"></td>
+        <td class="profitHD"></td>
+        <td class="profitTotal"></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    scenarios.forEach(createRow);
+
+    function recalc() {
+      const totalEad = parseFloat(document.getElementById("totalEad").value) || 0;
+      const marginC = parseFloat(document.getElementById("marginC").value) || 0;
+      const marginD = parseFloat(document.getElementById("marginD").value) || 0;
+      const marginHD = parseFloat(document.getElementById("marginHD").value) || 0;
+
+      warning.textContent = "";
+
+      [...tbody.rows].forEach(row => {
+        const pctC = parseFloat(row.querySelector(".pctC").value) || 0;
+        const pctD = parseFloat(row.querySelector(".pctD").value) || 0;
+        const pctHD = parseFloat(row.querySelector(".pctHD").value) || 0;
+        const sumPct = pctC + pctD + pctHD;
+
+        if (Math.abs(sumPct - 100) > 0.01) {
+          warning.textContent = "⚠ Some scenarios do not sum to 100%.";
+        }
+
+        const eadC = totalEad * pctC / 100;
+        const eadD = totalEad * pctD / 100;
+        const eadHD = totalEad * pctHD / 100;
+
+        const profC = eadC * marginC;
+        const profD = eadD * marginD;
+        const profHD = eadHD * marginHD;
+        const totalProf = profC + profD + profHD;
+
+        row.querySelector(".eadC").textContent = eadC.toFixed(1);
+        row.querySelector(".eadD").textContent = eadD.toFixed(1);
+        row.querySelector(".eadHD").textContent = eadHD.toFixed(1);
+        row.querySelector(".profitC").textContent = profC.toFixed(1);
+        row.querySelector(".profitD").textContent = profD.toFixed(1);
+        row.querySelector(".profitHD").textContent = profHD.toFixed(1);
+        row.querySelector(".profitTotal").textContent = totalProf.toFixed(1);
+      });
+    }
+
+    // recalc when anything changes
+    document.body.addEventListener("input", recalc);
+    recalc();
+  </script>
+</body>
+</html>
